@@ -2,6 +2,7 @@ import {Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {IRepository} from "aws-cdk-lib/aws-ecr";
 import {DockerImageAsset} from "aws-cdk-lib/aws-ecr-assets";
+import * as path from "path";
 
 export class AuthStack extends Stack {
   repository: IRepository;
@@ -10,7 +11,7 @@ export class AuthStack extends Stack {
     super(scope, id, props);
 
     const asset = new DockerImageAsset(this, 'AuthImage', {
-      directory: __dirname,
+      directory: path.join(__dirname, '../../'),
       file: 'cmd/lambda/Dockerfile'
     });
 
