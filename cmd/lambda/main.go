@@ -12,11 +12,11 @@ func main() {
 }
 
 type myContext struct {
-	AString string `json:"a_string"`
+	AString string `json:"aString"`
 }
 
 type authResponse struct {
-	IsAuthorized bool      `json:"is_authorized"`
+	IsAuthorized bool      `json:"isAuthorized"`
 	Context      myContext `json:"context"`
 }
 
