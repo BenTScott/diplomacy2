@@ -1,9 +1,4 @@
-FROM public.ecr.aws/lambda/provided:al2 as build
-# install compiler
-RUN yum install wget gzip tar git -y
-RUN wget https://go.dev/dl/go1.18beta1.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.18beta1.linux-amd64.tar.gz
-ENV PATH="$PATH:/usr/local/go/bin"
+FROM public.ecr.aws/l7f1t7j5/golang-beta:latest as build
 RUN go env -w GOPROXY=direct
 # cache dependencies
 ADD go.mod go.sum ./
