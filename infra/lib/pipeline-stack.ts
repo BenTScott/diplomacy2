@@ -7,6 +7,7 @@ export class PipelineStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
     const pipeline = new CodePipeline(this, 'Pipeline', {
+      pipelineName: 'DiplomacyPipeline',
       synth: new ShellStep('Synth', {
         input: CodePipelineSource.gitHub('BenTScott/diplomacy2','master', {
           authentication: SecretValue.secretsManager('github-token')
