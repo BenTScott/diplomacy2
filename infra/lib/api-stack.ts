@@ -12,7 +12,7 @@ export class ApiStack extends Stack {
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
-    const authorizer = new HttpLambdaAuthorizer('DefaultAuthorizer', prop.authFunction, {
+    const authorizer = new HttpLambdaAuthorizer('DefaultAuthorizer', props.authFunction, {
       responseTypes: [HttpLambdaResponseType.SIMPLE],
     });
 
