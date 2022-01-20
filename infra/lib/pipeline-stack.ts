@@ -1,6 +1,5 @@
 import {SecretValue, Stack, StackProps} from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import {Artifact} from "aws-cdk-lib/aws-codepipeline";
 import {CodePipeline, CodePipelineSource, ShellStep} from "aws-cdk-lib/pipelines";
 
 export class PipelineStack extends Stack {
@@ -18,6 +17,7 @@ export class PipelineStack extends Stack {
           'npm run build',
           'npx cdk synth',
         ],
+        primaryOutputDirectory: 'infra/cdk.out'
       }),
     });
   }
