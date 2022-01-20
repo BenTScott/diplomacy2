@@ -8,6 +8,6 @@ export class AppStage extends Stage {
     super(scope, id, props);
 
     const auth = new AuthStack(this, 'AuthStack');
-    new ApiStack(this, 'ApiStack', { authLambdaRepo: auth.repository })
+    new ApiStack(this, 'ApiStack', { authFunction: auth.function })
   }
 }
