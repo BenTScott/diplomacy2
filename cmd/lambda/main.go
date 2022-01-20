@@ -20,10 +20,10 @@ type authResponse struct {
 	Context      myContext `json:"context"`
 }
 
-func handleRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) authResponse {
+func handleRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (authResponse, error) {
 	fmt.Println(event)
 	return authResponse{
 		IsAuthorized: true,
 		Context:      myContext{AString: "hello world!!"},
-	}
+	}, nil
 }
