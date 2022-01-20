@@ -1,6 +1,7 @@
 import {SecretValue, Stack, StackProps} from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {CodePipeline, CodePipelineSource, ShellStep} from "aws-cdk-lib/pipelines";
+import {AppStage} from "./app-stage";
 
 export class PipelineStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -20,5 +21,8 @@ export class PipelineStack extends Stack {
         primaryOutputDirectory: 'infra/cdk.out'
       }),
     });
+
+    const wave = pipeline.addWave('StagingWave')
+    wave.addStage(new AppStage(this, 'AppStage'))
   }
 }
