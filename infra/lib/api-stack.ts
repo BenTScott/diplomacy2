@@ -3,7 +3,7 @@ import {Construct} from 'constructs';
 import {HttpApi, HttpMethod} from "@aws-cdk/aws-apigatewayv2-alpha";
 import {HttpLambdaAuthorizer, HttpLambdaResponseType} from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
 import {IFunction} from "aws-cdk-lib/aws-lambda";
-import {HttpUrlIntegration} from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
+import {HttpLambdaIntegration, HttpUrlIntegration} from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import {CfnStage} from "aws-cdk-lib/aws-apigatewayv2";
 import {LogGroup} from "aws-cdk-lib/aws-logs";
 
@@ -23,13 +23,23 @@ export class ApiStack extends Stack {
       defaultAuthorizer: authorizer,
     });
 
-    const testIntegration = new HttpUrlIntegration('TestIntegration', "https://www.google.com/")
+    const testIntegration = new HttpLambdaIntegration('TestIntegration', props.authFunction)
 
-    api.addRoutes({
+    const routes = api.addRoutes({
       methods: [ HttpMethod.ANY ],
       path: "/hello_world",
       integration: testIntegration,
       authorizer
+    })
+
+    authorizer.bind({
+      scope: this,
+      route: routes[0],
+    })
+
+    testIntegration.bind({
+      scope:this,
+      route: routes[0]
     })
 
     const accessLogs = new LogGroup(this, 'DiplomacyApi-AccessLogs')
