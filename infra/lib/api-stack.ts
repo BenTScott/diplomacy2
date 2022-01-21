@@ -9,7 +9,8 @@ import {LogGroup} from "aws-cdk-lib/aws-logs";
 
 export interface ApiStackProps extends StackProps {
   authFunction: IFunction,
-  userFunction: IFunction
+  userFunction: IFunction,
+  gameFunction: IFunction
 }
 
 export class ApiStack extends Stack {
@@ -26,17 +27,21 @@ export class ApiStack extends Stack {
 
     const userIntegration = new HttpLambdaIntegration('UserIntegration', props.userFunction)
 
-    const routes = api.addRoutes({
+    api.addRoutes({
       methods: [ HttpMethod.GET ],
       path: "/users",
       integration: userIntegration,
       authorizer
     });
 
-    userIntegration.bind({
-      route: routes[0],
-      scope: this
-    })
+    const gameIntegration = new HttpLambdaIntegration('GameIntegration', props.gameFunction)
+
+    api.addRoutes({
+      methods: [ HttpMethod.GET ],
+      path: "/game",
+      integration: gameIntegration,
+      authorizer
+    });
 
     const accessLogs = new LogGroup(this, 'DiplomacyApi-AccessLogs')
     const stage = api.defaultStage?.node.defaultChild as CfnStage

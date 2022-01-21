@@ -10,6 +10,7 @@ export class AppStage extends Stage {
 
     const auth = new AuthStack(this, 'AuthStack');
     const user = new LambdaStack(this, 'UserStack', { command: 'user' });
-    new ApiStack(this, 'ApiStack', { authFunction: auth.function, userFunction: user.function })
+    const game = new LambdaStack(this, 'GameStack', { command: 'game' });
+    new ApiStack(this, 'ApiStack', { authFunction: auth.function, userFunction: user.function, gameFunction: game.function })
   }
 }
