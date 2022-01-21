@@ -26,12 +26,17 @@ export class ApiStack extends Stack {
 
     const userIntegration = new HttpLambdaIntegration('UserIntegration', props.userFunction)
 
-    api.addRoutes({
+    const routes = api.addRoutes({
       methods: [ HttpMethod.GET ],
       path: "/users",
       integration: userIntegration,
       authorizer
     });
+
+    userIntegration.bind({
+      route: routes[0],
+      scope: this
+    })
 
     const accessLogs = new LogGroup(this, 'DiplomacyApi-AccessLogs')
     const stage = api.defaultStage?.node.defaultChild as CfnStage
