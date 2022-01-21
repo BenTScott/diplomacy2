@@ -8,7 +8,8 @@ import {CfnStage} from "aws-cdk-lib/aws-apigatewayv2";
 import {LogGroup} from "aws-cdk-lib/aws-logs";
 
 export interface ApiStackProps extends StackProps {
-  authFunction: IFunction
+  authFunction: IFunction,
+  userFunction: IFunction
 }
 
 export class ApiStack extends Stack {
@@ -23,12 +24,12 @@ export class ApiStack extends Stack {
       defaultAuthorizer: authorizer,
     });
 
-    const testIntegration = new HttpLambdaIntegration('TestIntegration', props.authFunction)
+    const userIntegration = new HttpLambdaIntegration('UserIntegration', props.userFunction)
 
     api.addRoutes({
-      methods: [ HttpMethod.ANY ],
-      path: "/hello_world",
-      integration: testIntegration,
+      methods: [ HttpMethod.GET ],
+      path: "/users",
+      integration: userIntegration,
       authorizer
     });
 
