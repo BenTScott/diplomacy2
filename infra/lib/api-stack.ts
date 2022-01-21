@@ -21,7 +21,6 @@ export class ApiStack extends Stack {
 
     const api = new HttpApi(this, 'DiplomacyApi', {
       defaultAuthorizer: authorizer,
-
     });
 
     const testIntegration = new HttpUrlIntegration('TestIntegration', "https://www.google.com/")
@@ -29,7 +28,8 @@ export class ApiStack extends Stack {
     api.addRoutes({
       methods: [ HttpMethod.ANY ],
       path: "/hello_world",
-      integration: testIntegration
+      integration: testIntegration,
+      authorizer
     })
 
     const accessLogs = new LogGroup(this, 'DiplomacyApi-AccessLogs')
@@ -47,7 +47,8 @@ export class ApiStack extends Stack {
         status: '$context.status',
         protocol: '$context.protocol',
         responseLength: '$context.responseLength',
-        domainName: '$context.domainName'
+        domainName: '$context.domainName',
+        integrationError: '$context.integrationErrorMessage'
       })};
   }
 }
