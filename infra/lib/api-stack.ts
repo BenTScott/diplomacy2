@@ -1,9 +1,11 @@
 import {Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
-import {HttpApi, HttpIntegration, HttpMethod} from "@aws-cdk/aws-apigatewayv2-alpha";
+import {HttpApi, HttpMethod} from "@aws-cdk/aws-apigatewayv2-alpha";
 import {HttpLambdaAuthorizer, HttpLambdaResponseType} from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
 import {IFunction} from "aws-cdk-lib/aws-lambda";
 import {HttpUrlIntegration} from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
+import {CfnStage} from "aws-cdk-lib/aws-apigatewayv2";
+import {LogGroup} from "aws-cdk-lib/aws-logs";
 
 export interface ApiStackProps extends StackProps {
   authFunction: IFunction
@@ -18,7 +20,8 @@ export class ApiStack extends Stack {
     });
 
     const api = new HttpApi(this, 'DiplomacyApi', {
-      defaultAuthorizer: authorizer
+      defaultAuthorizer: authorizer,
+
     });
 
     const testIntegration = new HttpUrlIntegration('TestIntegration', "https://www.google.com/")
@@ -28,5 +31,23 @@ export class ApiStack extends Stack {
       path: "/hello_world",
       integration: testIntegration
     })
+
+    const accessLogs = new LogGroup(this, 'DiplomacyApi-AccessLogs')
+    const stage = api.defaultStage?.node.defaultChild as CfnStage
+    stage.accessLogSettings = {
+      destinationArn: accessLogs.logGroupArn,
+      format: JSON.stringify({
+        requestId: '$context.requestId',
+        userAgent: '$context.identity.userAgent',
+        sourceIp: '$context.identity.sourceIp',
+        requestTime: '$context.requestTime',
+        requestTimeEpoch: '$context.requestTimeEpoch',
+        httpMethod: '$context.httpMethod',
+        path: '$context.path',
+        status: '$context.status',
+        protocol: '$context.protocol',
+        responseLength: '$context.responseLength',
+        domainName: '$context.domainName'
+      })};
   }
 }
