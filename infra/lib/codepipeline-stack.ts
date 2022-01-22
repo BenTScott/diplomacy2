@@ -80,9 +80,16 @@ export class CodePipelineStack extends Stack {
 
     const deployRole = new Role(this, 'DeployRole', {
       assumedBy: new ServicePrincipal('codebuild.amazonaws.com'),
+      inlinePolicies: {
+        "CDKDeploy": new PolicyDocument({
+        statements: [
+            new PolicyStatement({
+              actions: ["sts:AssumeRole"],
+              resources: ["arn:aws:iam::*:role/cdk-*"]
+            }),
+        ]
+      })}
     });
-
-    deployRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName("AWSCloudFormationFullAccess"));
 
     pipe.addStage({
       stageName: 'Deploy_Pipeline',
@@ -103,7 +110,6 @@ export class CodePipelineStack extends Stack {
                 },
                 build: {
                   commands: [
-                    "cdk -a . ls",
                     "cdk -a . deploy DiplomacyCodePipelineStack --require-approval=never --verbose"
                   ]
                 }
