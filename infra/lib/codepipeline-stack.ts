@@ -111,7 +111,7 @@ export class CodePipelineStack extends Stack {
                   value: environment
                 },
               },
-              buildSpec: BuildSpec.fromSourceFilename('./buildSpec.yml'),
+              buildSpec: BuildSpec.fromSourceFilename('./buildspec.yml'),
               role: lambdaDeployRole
             })
           })
