@@ -1,21 +1,12 @@
 import {SecretValue, Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {Artifact, Pipeline} from "aws-cdk-lib/aws-codepipeline";
-import {
-  CodeBuildAction,
-  GitHubSourceAction,
-  GitHubTrigger
-} from "aws-cdk-lib/aws-codepipeline-actions";
-import {BuildSpec, EventAction, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
-import {
-  PolicyDocument,
-  PolicyStatement,
-  ServicePrincipal
-} from "aws-cdk-lib/aws-iam";
-import {LambdaStack} from "./lambda-stack";
+import {CodeBuildAction, GitHubSourceAction, GitHubTrigger} from "aws-cdk-lib/aws-codepipeline-actions";
+import {BuildEnvironmentVariableType, BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
+import {PolicyDocument, PolicyStatement, Role, ServicePrincipal} from "aws-cdk-lib/aws-iam";
+import {EcrStack} from "./ecr-stack";
 import {SharedRole} from "../constructs/SharedRole";
-import { } from "aws-cdk-lib/aws-events-targets";
-import {Rule} from "aws-cdk-lib/aws-events";
+import {LambdaStack} from "./lambda-stack";
 
 export class CodePipelineStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -76,15 +67,56 @@ export class CodePipelineStack extends Stack {
       ]
     })
 
-    new LambdaStack(this, 'AuthLambdaStack', { command: 'auth' })
+    // To do: generate from iterating over the directory
+    const commands = ['auth']
+
+
+    const reposStackId = 'EcrStack';
+    const repoStack = new EcrStack(this, reposStackId, { commands });
+
+    const lambdaStackId = 'LambdaStack';
+    const lambdaStack = new LambdaStack(this, lambdaStackId, { repositories: repoStack.repositories })
 
     pipe.addStage({
       stageName: 'Deploy_Pipeline',
       actions: [
         getCdkDeployAction(this, 'Deploy_CDK_Pipeline', 'DiplomacyCodePipelineStack', cdk, 1),
-        getCdkDeployAction(this, 'Deploy_Infrastructure', 'DiplomacyCodePipelineStack/*', cdk, 2),
+        getCdkDeployAction(this, 'Deploy_Repositories', 'DiplomacyCodePipelineStack/' + reposStackId, cdk, 2),
       ]
     });
+
+    const environment = Object.entries(repoStack.repositories).map(x => x[0] + '|' + x[1].repositoryUri).join(';')
+
+    const lambdaDeployRole = new Role(this, 'LambdaDeployRole', {
+      assumedBy: new ServicePrincipal('codebuild.amazonaws.com'),
+    });
+
+    Object.values(repoStack.repositories).forEach(x => x.grantPullPush(lambdaDeployRole))
+
+    pipe.addStage({
+      stageName: 'Build_Lambda',
+      actions: [
+          new CodeBuildAction({
+            input: source,
+            actionName: 'Build_Lambda_Images',
+            runOrder: 1,
+            project: new PipelineProject(this, 'BuildLambdaProject', {
+              environment: {
+                buildImage: LinuxBuildImage.AMAZON_LINUX_2_2,
+                privileged: true
+              },
+              environmentVariables: {
+                lambdas: {
+                  type: BuildEnvironmentVariableType.PLAINTEXT,
+                  value: environment
+                },
+              },
+              buildSpec: BuildSpec.fromSourceFilename('./buildSpec.yml'),
+              role: lambdaDeployRole
+            })
+          })
+      ]
+    })
   }
 }
 
