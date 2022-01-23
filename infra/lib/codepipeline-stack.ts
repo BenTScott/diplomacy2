@@ -41,8 +41,6 @@ export class CodePipelineStack extends Stack {
       ]
     });
 
-    pipe.
-
     const cdk = new Artifact('CDK')
 
     pipe.addStage({
