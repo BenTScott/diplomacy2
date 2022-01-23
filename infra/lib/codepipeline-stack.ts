@@ -1,24 +1,19 @@
 import {SecretValue, Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
-import {CodePipeline, CodePipelineSource, ShellStep} from "aws-cdk-lib/pipelines";
-import {AppStage} from "./app-stage";
 import {Artifact, Pipeline} from "aws-cdk-lib/aws-codepipeline";
 import {
-  CloudFormationExecuteChangeSetAction,
   CodeBuildAction,
   GitHubSourceAction,
   GitHubTrigger
 } from "aws-cdk-lib/aws-codepipeline-actions";
 import {BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
-import {createRole} from "aws-cdk-lib/aws-autoscaling-hooktargets";
 import {
-  AccountRootPrincipal,
-  ManagedPolicy,
   PolicyDocument,
   PolicyStatement,
-  Role,
   ServicePrincipal
 } from "aws-cdk-lib/aws-iam";
+import {LambdaStack} from "./lambda-stack";
+import {SharedRole} from "../constructs/SharedRole";
 
 export class CodePipelineStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -78,47 +73,55 @@ export class CodePipelineStack extends Stack {
       ]
     })
 
-    const deployRole = new Role(this, 'DeployRole', {
-      assumedBy: new ServicePrincipal('codebuild.amazonaws.com'),
-      inlinePolicies: {
-        "CDKDeploy": new PolicyDocument({
-        statements: [
-            new PolicyStatement({
-              actions: ["sts:AssumeRole"],
-              resources: ["arn:aws:iam::*:role/cdk-*"]
-            }),
-        ]
-      })}
-    });
+    new LambdaStack(this, 'AuthLambdaStack', { command: 'auth' })
 
     pipe.addStage({
       stageName: 'Deploy_Pipeline',
       actions: [
-        new CodeBuildAction({
-          input: cdk,
-          actionName: 'Deploy_CDK_Pipeline',
-          project: new PipelineProject(this, 'MutateProject', {
-            environment: {
-              buildImage: LinuxBuildImage.AMAZON_LINUX_2_2,
-              privileged: true
-            },
-            buildSpec: BuildSpec.fromObject({
-              version: 0.2,
-              phases: {
-                install: {
-                  commands: "npm install -g aws-cdk"
-                },
-                build: {
-                  commands: [
-                    "cdk -a . deploy DiplomacyCodePipelineStack --require-approval=never --verbose"
-                  ]
-                }
-              }
-            }),
-            role: deployRole
-          })
-        })
+        getCdkDeployAction(this, 'Deploy_CDK_Pipeline', 'DiplomacyCodePipelineStack', cdk, 1),
+        getCdkDeployAction(this, 'Deploy_Infrastructure', 'DiplomacyCodePipelineStack/*', cdk, 2),
       ]
-    })
+    });
   }
+}
+
+function getCdkDeployAction(scope: Construct, actionName: string, stackName: string, cdkArtifact: Artifact, runOrder: number | undefined) : CodeBuildAction {
+  const deployRole = SharedRole.getRole(scope, 'DeployRole', {
+    assumedBy: new ServicePrincipal('codebuild.amazonaws.com'),
+    inlinePolicies: {
+      "CDKDeploy": new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            actions: ["sts:AssumeRole"],
+            resources: ["arn:aws:iam::*:role/cdk-*"]
+          }),
+        ]
+      })}
+  });
+
+  return new CodeBuildAction({
+    input: cdkArtifact,
+    actionName,
+    runOrder,
+    project: new PipelineProject(scope, actionName + 'Project', {
+      environment: {
+        buildImage: LinuxBuildImage.AMAZON_LINUX_2_2,
+        privileged: true
+      },
+      buildSpec: BuildSpec.fromObject({
+        version: 0.2,
+        phases: {
+          install: {
+            commands: "npm install -g aws-cdk"
+          },
+          build: {
+            commands: [
+              `cdk -a . deploy ${stackName} --require-approval=never --verbose`
+            ]
+          }
+        }
+      }),
+      role: deployRole
+    })
+  })
 }
