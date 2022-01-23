@@ -6,7 +6,7 @@ import {
   GitHubSourceAction,
   GitHubTrigger
 } from "aws-cdk-lib/aws-codepipeline-actions";
-import {BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
+import {BuildSpec, EventAction, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
 import {
   PolicyDocument,
   PolicyStatement,
@@ -14,12 +14,15 @@ import {
 } from "aws-cdk-lib/aws-iam";
 import {LambdaStack} from "./lambda-stack";
 import {SharedRole} from "../constructs/SharedRole";
+import { } from "aws-cdk-lib/aws-events-targets";
+import {Rule} from "aws-cdk-lib/aws-events";
 
 export class CodePipelineStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
     const pipe = new Pipeline(this, 'CodePipeline', {
       pipelineName: 'DiplomacyDeployPipeline',
+      restartExecutionOnUpdate: true
     });
 
     const source = new Artifact('SourceCode')
@@ -34,9 +37,11 @@ export class CodePipelineStack extends Stack {
             oauthToken: SecretValue.secretsManager('github-token'),
             output: source,
             trigger: GitHubTrigger.POLL
-          })
+          }),
       ]
     });
+
+    pipe.
 
     const cdk = new Artifact('CDK')
 
