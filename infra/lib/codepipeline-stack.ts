@@ -102,7 +102,7 @@ export class CodePipelineStack extends Stack {
             runOrder: 1,
             project: new PipelineProject(this, 'BuildLambdaProject', {
               environment: {
-                buildImage: LinuxBuildImage.AMAZON_LINUX_2_2,
+                buildImage: LinuxBuildImage.STANDARD_5_0,
                 privileged: true
               },
               environmentVariables: {
