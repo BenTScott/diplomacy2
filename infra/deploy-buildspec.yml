@@ -1,0 +1,7 @@
+version: 0.2,
+phases:
+  install:
+    commands: npm install -g aws-cdk
+  build:
+    commands:
+      - cdk -a cdk.out deploy $STACK --require-approval=never --verbose

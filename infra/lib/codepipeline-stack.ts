@@ -2,10 +2,16 @@ import {SecretValue, Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {Artifact, Pipeline} from "aws-cdk-lib/aws-codepipeline";
 import {CodeBuildAction, GitHubSourceAction, GitHubTrigger} from "aws-cdk-lib/aws-codepipeline-actions";
-import {BuildEnvironmentVariableType, BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
+import {
+  BuildEnvironmentVariableType,
+  BuildSpec, Cache,
+  LinuxBuildImage,
+  PipelineProject
+} from "aws-cdk-lib/aws-codebuild";
 import {PolicyDocument, PolicyStatement, Role, ServicePrincipal} from "aws-cdk-lib/aws-iam";
 import {EcrStack} from "./ecr-stack";
 import {LambdaStack} from "./lambda-stack";
+import {Bucket} from "aws-cdk-lib/aws-s3";
 
 export class CodePipelineStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -44,23 +50,7 @@ export class CodePipelineStack extends Stack {
               environment: {
                 buildImage: LinuxBuildImage.STANDARD_5_0
               },
-              buildSpec: BuildSpec.fromObject({
-                version: 0.2,
-                phases: {
-                  build: {
-                    commands: [
-                      'cd infra',
-                      'npm ci',
-                      'npm run build',
-                      'npx cdk synth',
-                    ]
-                  },
-                },
-                artifacts: {
-                  "base-directory": "infra/cdk.out",
-                  files: "**/*"
-                }
-              })
+              buildSpec: BuildSpec.fromSourceFilename('infra/synth-buildspec.yml'),
             })
           })
       ]
@@ -68,7 +58,6 @@ export class CodePipelineStack extends Stack {
 
     // To do: generate from iterating over the directory
     const commands = ['auth']
-
 
     const repoStack = new EcrStack(this, 'EcrStack', { commands });
 
@@ -91,6 +80,8 @@ export class CodePipelineStack extends Stack {
     Object.values(repoStack.repositories).forEach(x => x.grantPullPush(lambdaDeployRole))
 
     const lambdaStack = new LambdaStack(this, 'LambdaStack', { repositories: repoStack.repositories })
+
+    const cacheBucket = new Bucket(this, 'LambdaCacheBucket')
 
     pipe.addStage({
       stageName: 'Build_Lambda',
@@ -115,7 +106,8 @@ export class CodePipelineStack extends Stack {
                 }
               },
               buildSpec: BuildSpec.fromSourceFilename('./buildspec.yml'),
-              role: lambdaDeployRole
+              role: lambdaDeployRole,
+              cache: Cache.bucket(cacheBucket)
             })
           }),
           getCodeBuildAction('Deploy_Lambda', cdk, cdkDeploy, lambdaStack.node.path, 2)
@@ -143,19 +135,7 @@ function getCdkDeployProject(scope: Construct) : PipelineProject {
       buildImage: LinuxBuildImage.AMAZON_LINUX_2_2,
       privileged: true
     },
-    buildSpec: BuildSpec.fromObject({
-      version: 0.2,
-      phases: {
-        install: {
-          commands: "npm install -g aws-cdk"
-        },
-        build: {
-          commands: [
-            `cdk -a . deploy $STACK --require-approval=never --verbose`
-          ]
-        }
-      }
-    }),
+    buildSpec: BuildSpec.fromSourceFilename('./deploy-buildspec.yml'),
     role: deployRole
   });
 }

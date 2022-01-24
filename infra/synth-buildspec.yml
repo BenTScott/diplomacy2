@@ -1,0 +1,13 @@
+version: 0.2,
+phases:
+  build:
+    commands:
+      - cd infra
+      - npm ci
+      - npm run build
+      - npx cdk synth
+artifacts:
+  base-directory: infra
+    files:
+      - cdk.out/**/*
+      - deploy-buildspec.yml
