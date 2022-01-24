@@ -12,6 +12,7 @@ import {PolicyDocument, PolicyStatement, Role, ServicePrincipal} from "aws-cdk-l
 import {EcrStack} from "./ecr-stack";
 import {LambdaStack} from "./lambda-stack";
 import {Bucket} from "aws-cdk-lib/aws-s3";
+import {ApiStack} from "./api-stack";
 
 export class CodePipelineStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -57,7 +58,7 @@ export class CodePipelineStack extends Stack {
     })
 
     // To do: generate from iterating over the directory
-    const commands = ['auth']
+    const commands = ['auth', 'user']
 
     const repoStack = new EcrStack(this, 'EcrStack', { commands });
 
@@ -112,6 +113,15 @@ export class CodePipelineStack extends Stack {
           getCodeBuildAction('Deploy_Lambda', cdk, cdkDeploy, lambdaStack.node.path, 2)
       ]
     })
+
+    const apiStack = new ApiStack(this, 'ApiStack', { functions: lambdaStack.functions })
+
+    pipe.addStage({
+      stageName: 'Deploy_API',
+      actions: [
+          getCodeBuildAction('Deploy_API', cdk, cdkDeploy, apiStack.node.path)
+      ]
+    });
   }
 }
 

@@ -2,22 +2,20 @@ import {Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {HttpApi, HttpMethod} from "@aws-cdk/aws-apigatewayv2-alpha";
 import {HttpLambdaAuthorizer, HttpLambdaResponseType} from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
-import {IFunction} from "aws-cdk-lib/aws-lambda";
+import {Function, IFunction} from "aws-cdk-lib/aws-lambda";
 import {HttpLambdaIntegration, HttpUrlIntegration} from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import {CfnStage} from "aws-cdk-lib/aws-apigatewayv2";
 import {LogGroup} from "aws-cdk-lib/aws-logs";
 
 export interface ApiStackProps extends StackProps {
-  authFunction: IFunction,
-  userFunction: IFunction,
-  gameFunction: IFunction
+  functions: { [command: string]: Function };
 }
 
 export class ApiStack extends Stack {
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
-    const authorizer = new HttpLambdaAuthorizer('DefaultAuthorizer', props.authFunction, {
+    const authorizer = new HttpLambdaAuthorizer('DefaultAuthorizer', props.functions['auth'], {
       responseTypes: [HttpLambdaResponseType.SIMPLE],
     });
 
@@ -25,21 +23,12 @@ export class ApiStack extends Stack {
       defaultAuthorizer: authorizer,
     });
 
-    const userIntegration = new HttpLambdaIntegration('UserIntegration', props.userFunction)
+    const userIntegration = new HttpLambdaIntegration('UserIntegration', props.functions['user'])
 
     api.addRoutes({
       methods: [ HttpMethod.GET ],
-      path: "/users",
+      path: "/user",
       integration: userIntegration,
-      authorizer
-    });
-
-    const gameIntegration = new HttpLambdaIntegration('GameIntegration', props.gameFunction)
-
-    api.addRoutes({
-      methods: [ HttpMethod.GET ],
-      path: "/game",
-      integration: gameIntegration,
       authorizer
     });
 
