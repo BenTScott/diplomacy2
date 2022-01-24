@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-echo "Found env variable: $lambdas"
+echo "Found env variable: $LAMBDAS"
 set -e
 
 IFS=';'
-for lambda in $lambdas
+for lambda in $LAMBDAS
 do
   IFS='|'
   echo "Building $lambda"

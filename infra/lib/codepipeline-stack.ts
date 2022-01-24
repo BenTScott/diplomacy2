@@ -106,10 +106,14 @@ export class CodePipelineStack extends Stack {
                 privileged: true
               },
               environmentVariables: {
-                lambdas: {
+                LAMBDAS: {
                   type: BuildEnvironmentVariableType.PLAINTEXT,
                   value: environment
                 },
+                AWS_ACCOUNT_ID: {
+                  type: BuildEnvironmentVariableType.PLAINTEXT,
+                  value: this.account
+                }
               },
               buildSpec: BuildSpec.fromSourceFilename('./buildspec.yml'),
               role: lambdaDeployRole
