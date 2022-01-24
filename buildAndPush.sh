@@ -11,7 +11,7 @@ do
   read cmd ecr <<< $lambda
   echo "Command: $cmd"
   echo "Repo: $ecr"
-  docker build . --build-arg cmd=$cmd -t $cmd:latest
-  docker tag $cmd:latest $cmd:$CODEBUILD_SOURCE_VERSION
-  docker push $ecr
+  docker build . --build-arg cmd=$cmd -t $ecr:$CODEBUILD_RESOLVED_SOURCE_VERSION
+  docker tag $ecr:$CODEBUILD_RESOLVED_SOURCE_VERSION $ecr:latest
+  docker push $ecr --all-tags
 done

@@ -43,7 +43,7 @@ export class CodePipelineStack extends Stack {
             outputs: [ cdk ],
             project: new PipelineProject(this, 'SynthProject', {
               environment: {
-                buildImage: LinuxBuildImage.AMAZON_LINUX_2_2
+                buildImage: LinuxBuildImage.STANDARD_5_0
               },
               buildSpec: BuildSpec.fromObject({
                 version: 0.2,
