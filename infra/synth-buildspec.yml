@@ -8,6 +8,6 @@ phases:
       - npx cdk synth
 artifacts:
   base-directory: infra
-    files:
-      - cdk.out/**/*
-      - deploy-buildspec.yml
+  files:
+    - cdk.out/**/*
+    - deploy-buildspec.yml
