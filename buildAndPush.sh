@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 
-toBuild=$(echo $lambdas | tr ";" "\n")
-IFS='|'
+echo "Found env variable: $lambdas"
+set -e
 
-for lambda in toBuild
+IFS=';'
+for lambda in $lambdas
 do
+  IFS='|'
   echo "Building $lambda"
   read cmd ecr <<< $lambda
+  echo "Command: $cmd"
+  echo "Repo: $ecr"
   docker build . --build-arg cmd=$cmd -t $cmd:latest
   docker tag $cmd:latest $cmd:$CODEBUILD_SOURCE_VERSION
   docker push $ecr
