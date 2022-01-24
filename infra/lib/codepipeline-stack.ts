@@ -5,7 +5,6 @@ import {CodeBuildAction, GitHubSourceAction, GitHubTrigger} from "aws-cdk-lib/aw
 import {BuildEnvironmentVariableType, BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
 import {PolicyDocument, PolicyStatement, Role, ServicePrincipal} from "aws-cdk-lib/aws-iam";
 import {EcrStack} from "./ecr-stack";
-import {SharedRole} from "../constructs/SharedRole";
 import {LambdaStack} from "./lambda-stack";
 
 export class CodePipelineStack extends Stack {
@@ -71,17 +70,15 @@ export class CodePipelineStack extends Stack {
     const commands = ['auth']
 
 
-    const reposStackId = 'EcrStack';
-    const repoStack = new EcrStack(this, reposStackId, { commands });
+    const repoStack = new EcrStack(this, 'EcrStack', { commands });
 
-    const lambdaStackId = 'LambdaStack';
-    const lambdaStack = new LambdaStack(this, lambdaStackId, { repositories: repoStack.repositories })
+    const cdkDeploy = getCdkDeployProject(this);
 
     pipe.addStage({
       stageName: 'Deploy_Pipeline',
       actions: [
-        getCdkDeployAction(this, 'Deploy_CDK_Pipeline', 'DiplomacyCodePipelineStack', cdk, 1),
-        getCdkDeployAction(this, 'Deploy_Repositories', 'DiplomacyCodePipelineStack/' + reposStackId, cdk, 2),
+        getCodeBuildAction('Deploy_CDK_Pipeline', cdk, cdkDeploy, this.node.path, 1),
+        getCodeBuildAction('Deploy_Repositories', cdk, cdkDeploy, repoStack.node.path, 2),
       ]
     });
 
@@ -92,6 +89,8 @@ export class CodePipelineStack extends Stack {
     });
 
     Object.values(repoStack.repositories).forEach(x => x.grantPullPush(lambdaDeployRole))
+
+    const lambdaStack = new LambdaStack(this, 'LambdaStack', { repositories: repoStack.repositories })
 
     pipe.addStage({
       stageName: 'Build_Lambda',
@@ -118,14 +117,15 @@ export class CodePipelineStack extends Stack {
               buildSpec: BuildSpec.fromSourceFilename('./buildspec.yml'),
               role: lambdaDeployRole
             })
-          })
+          }),
+          getCodeBuildAction('Deploy_Lambda', cdk, cdkDeploy, lambdaStack.node.path, 2)
       ]
     })
   }
 }
 
-function getCdkDeployAction(scope: Construct, actionName: string, stackName: string, cdkArtifact: Artifact, runOrder: number | undefined) : CodeBuildAction {
-  const deployRole = SharedRole.getRole(scope, 'DeployRole', {
+function getCdkDeployProject(scope: Construct) : PipelineProject {
+  const deployRole = new Role(scope, 'DeployRole', {
     assumedBy: new ServicePrincipal('codebuild.amazonaws.com'),
     inlinePolicies: {
       "CDKDeploy": new PolicyDocument({
@@ -138,29 +138,39 @@ function getCdkDeployAction(scope: Construct, actionName: string, stackName: str
       })}
   });
 
+  return new PipelineProject(scope, 'CDKDeployProject', {
+    environment: {
+      buildImage: LinuxBuildImage.AMAZON_LINUX_2_2,
+      privileged: true
+    },
+    buildSpec: BuildSpec.fromObject({
+      version: 0.2,
+      phases: {
+        install: {
+          commands: "npm install -g aws-cdk"
+        },
+        build: {
+          commands: [
+            `cdk -a . deploy $STACK --require-approval=never --verbose`
+          ]
+        }
+      }
+    }),
+    role: deployRole
+  });
+}
+
+function getCodeBuildAction(actionName: string, artifact: Artifact, project: PipelineProject, stack: string, runOrder: number | undefined) : CodeBuildAction {
   return new CodeBuildAction({
-    input: cdkArtifact,
+    input: artifact,
     actionName,
     runOrder,
-    project: new PipelineProject(scope, actionName + 'Project', {
-      environment: {
-        buildImage: LinuxBuildImage.AMAZON_LINUX_2_2,
-        privileged: true
-      },
-      buildSpec: BuildSpec.fromObject({
-        version: 0.2,
-        phases: {
-          install: {
-            commands: "npm install -g aws-cdk"
-          },
-          build: {
-            commands: [
-              `cdk -a . deploy ${stackName} --require-approval=never --verbose`
-            ]
-          }
-        }
-      }),
-      role: deployRole
-    })
+    project: project,
+    environmentVariables: {
+      STACK: {
+        type: BuildEnvironmentVariableType.PLAINTEXT,
+        value: stack
+      }
+    }
   })
 }
