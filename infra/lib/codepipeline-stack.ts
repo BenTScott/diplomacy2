@@ -64,10 +64,9 @@ export class CodePipelineStack extends Stack {
     const cdkDeploy = getCdkDeployProject(this);
 
     pipe.addStage({
-      stageName: 'Deploy_Pipeline',
+      stageName: 'Deploy_Pipeline_And_Repos',
       actions: [
-        getCodeBuildAction('Deploy_CDK_Pipeline', cdk, cdkDeploy, this.node.path, 1),
-        getCodeBuildAction('Deploy_Repositories', cdk, cdkDeploy, repoStack.node.path, 2),
+        getCodeBuildAction('Deploy_CDK_Pipeline_And_Repos', cdk, cdkDeploy, `${this.node.path} ${repoStack.node.path}`),
       ]
     });
 
@@ -140,7 +139,7 @@ function getCdkDeployProject(scope: Construct) : PipelineProject {
   });
 }
 
-function getCodeBuildAction(actionName: string, artifact: Artifact, project: PipelineProject, stack: string, runOrder: number | undefined) : CodeBuildAction {
+function getCodeBuildAction(actionName: string, artifact: Artifact, project: PipelineProject, stack: string, runOrder?: number) : CodeBuildAction {
   return new CodeBuildAction({
     input: artifact,
     actionName,
