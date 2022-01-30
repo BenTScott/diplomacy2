@@ -3,13 +3,9 @@
 echo "Found env variable: $LAMBDAS"
 set -e
 
-buildAndPush() {
+tagAndPush() {
   IFS='|'
-  echo "Building $1"
   read cmd ecr <<< $1
-  echo "Command: $cmd"
-  echo "Repo: $ecr"
-  docker build . --build-arg cmd=$cmd -t $ecr:$CODEBUILD_RESOLVED_SOURCE_VERSION
   docker tag $ecr:$CODEBUILD_RESOLVED_SOURCE_VERSION $ecr:latest
   docker push $ecr --all-tags
 }
@@ -17,7 +13,18 @@ buildAndPush() {
 IFS=';'
 for lambda in $LAMBDAS
 do
-  buildAndPush $lambda &
+  IFS='|'
+  echo "Building $lambda"
+  read cmd ecr <<< $lambda
+  echo "Command: $cmd"
+  echo "Repo: $ecr"
+  docker build . --build-arg cmd=$cmd -t $ecr:$CODEBUILD_RESOLVED_SOURCE_VERSION
+done
+
+IFS=';'
+for lambda in $LAMBDAS
+do
+  tagAndPush $lambda &
 done
 
 wait
