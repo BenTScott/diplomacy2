@@ -3,19 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"github.com/golang-jwt/jwt"
-	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
 	"os"
 )
-
-var r *httprouter.Router
 
 var accessSecret []byte
 
@@ -31,21 +28,10 @@ func init() {
 	}
 
 	accessSecret = sv.SecretBinary
-
-	r = httprouter.New()
-	r.POST("/", loginHandler)
-	r.NotFound = notFoundHandler{}
 }
 
 func main() {
-	lambda.Start(httpadapter.New(r).ProxyWithContext)
-}
-
-type notFoundHandler struct{}
-
-func (n notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Unmapped route - %v\n", *r)
-	w.WriteHeader(http.StatusNotFound)
+	lambda.Start(loginHandler)
 }
 
 type loginReq struct {
@@ -57,10 +43,22 @@ type loginResp struct {
 	AccessToken string `json:"access_token,omitempty"`
 }
 
-func loginHandler(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	body, err := parseBody[loginReq](r)
+func loginHandler(req events.APIGatewayV2HTTPRequest) (resp events.APIGatewayV2HTTPResponse, err error) {
+	resp = events.APIGatewayV2HTTPResponse{
+		StatusCode:        http.StatusBadRequest,
+		Headers:           nil,
+		MultiValueHeaders: nil,
+		IsBase64Encoded:   false,
+		Cookies:           nil,
+	}
+
+	if req.RequestContext.HTTP.Method != http.MethodPost {
+		resp.StatusCode = http.StatusNotFound
+		return
+	}
+
+	body, err := parseBody[loginReq](req.Body)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -71,25 +69,26 @@ func loginHandler(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
 	ss, err := token.SignedString(accessSecret)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	lr := loginResp{ss}
 
 	fmt.Println(body)
-	en := json.NewEncoder(w)
 
-	if err := en.Encode(&lr); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	respBody, err := json.Marshal(&lr)
+
+	if err != nil {
+		resp.StatusCode = http.StatusBadRequest
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	resp.Body = string(respBody)
+	resp.StatusCode = http.StatusOK
+	return
 }
 
-func parseBody[T any](r *http.Request) (out T, err error) {
-	decoder := json.NewDecoder(r.Body)
-	err = decoder.Decode(&out)
+func parseBody[T any](body string) (out T, err error) {
+	err = json.Unmarshal([]byte(body), &out)
 	return
 }
