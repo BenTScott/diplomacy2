@@ -33,7 +33,7 @@ func init() {
 	accessSecret = sv.SecretBinary
 
 	r = httprouter.New()
-	r.POST("/login", loginHandler)
+	r.POST("/", loginHandler)
 	r.NotFound = notFoundHandler{}
 }
 
