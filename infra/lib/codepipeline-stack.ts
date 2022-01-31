@@ -58,7 +58,7 @@ export class CodePipelineStack extends Stack {
     })
 
     // To do: generate from iterating over the directory
-    const commands = ['auth', 'user']
+    const commands = ['auth', 'user', 'login']
 
     const repoStack = new EcrStack(this, 'EcrStack', { commands });
 

@@ -1,9 +1,15 @@
 import {Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
-import {HttpApi, HttpMethod} from "@aws-cdk/aws-apigatewayv2-alpha";
+import {
+  HttpApi,
+  HttpAuthorizer,
+  HttpMethod,
+  HttpNoneAuthorizer,
+  IHttpRouteAuthorizer
+} from "@aws-cdk/aws-apigatewayv2-alpha";
 import {HttpLambdaAuthorizer, HttpLambdaResponseType} from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
-import {Function, IFunction} from "aws-cdk-lib/aws-lambda";
-import {HttpLambdaIntegration, HttpUrlIntegration} from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
+import {Function} from "aws-cdk-lib/aws-lambda";
+import {HttpLambdaIntegration} from "@aws-cdk/aws-apigatewayv2-integrations-alpha";
 import {CfnStage} from "aws-cdk-lib/aws-apigatewayv2";
 import {LogGroup} from "aws-cdk-lib/aws-logs";
 
@@ -12,25 +18,22 @@ export interface ApiStackProps extends StackProps {
 }
 
 export class ApiStack extends Stack {
+  private props: ApiStackProps;
+  private authorizer: IHttpRouteAuthorizer;
+
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
-    const authorizer = new HttpLambdaAuthorizer('DefaultAuthorizer', props.functions['auth'], {
+    this.props = props;
+
+    this.authorizer = new HttpLambdaAuthorizer('DefaultAuthorizer', props.functions['auth'], {
       responseTypes: [HttpLambdaResponseType.SIMPLE],
     });
 
-    const api = new HttpApi(this, 'DiplomacyApi', {
-      defaultAuthorizer: authorizer,
-    });
+    const api = new HttpApi(this, 'DiplomacyApi',);
 
-    const userIntegration = new HttpLambdaIntegration('UserIntegration', props.functions['user'])
-
-    api.addRoutes({
-      methods: [ HttpMethod.GET ],
-      path: "/user",
-      integration: userIntegration,
-      authorizer
-    });
+    this.addRoute(api, true, [HttpMethod.GET], 'user')
+    this.addRoute(api, false, [HttpMethod.POST], 'login')
 
     const accessLogs = new LogGroup(this, 'DiplomacyApi-AccessLogs')
     const stage = api.defaultStage?.node.defaultChild as CfnStage
@@ -50,5 +53,17 @@ export class ApiStack extends Stack {
         domainName: '$context.domainName',
         integrationError: '$context.integrationErrorMessage'
       })};
+  }
+
+  addRoute(api: HttpApi, restricted: boolean, methods: HttpMethod[], command: string) {
+    const func = this.props.functions[command];
+    const integration = new HttpLambdaIntegration(func.node.id + 'Integration', func)
+
+    api.addRoutes({
+      methods,
+      path: `/${command}`,
+      integration,
+      authorizer: restricted ? this.authorizer : undefined,
+    })
   }
 }
