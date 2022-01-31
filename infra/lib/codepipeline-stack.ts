@@ -4,14 +4,15 @@ import {Artifact, Pipeline} from "aws-cdk-lib/aws-codepipeline";
 import {CodeBuildAction, GitHubSourceAction, GitHubTrigger} from "aws-cdk-lib/aws-codepipeline-actions";
 import {
   BuildEnvironmentVariableType,
-  BuildSpec, Cache,
+  BuildSpec,
+  Cache,
   LinuxBuildImage,
+  LocalCacheMode,
   PipelineProject
 } from "aws-cdk-lib/aws-codebuild";
 import {PolicyDocument, PolicyStatement, Role, ServicePrincipal} from "aws-cdk-lib/aws-iam";
 import {EcrStack} from "./ecr-stack";
 import {LambdaStack} from "./lambda-stack";
-import {Bucket} from "aws-cdk-lib/aws-s3";
 import {ApiStack} from "./api-stack";
 
 export class CodePipelineStack extends Stack {
@@ -81,8 +82,6 @@ export class CodePipelineStack extends Stack {
 
     const lambdaStack = new LambdaStack(this, 'LambdaStack', { repositories: repoStack.repositories })
 
-    const cacheBucket = new Bucket(this, 'LambdaCacheBucket')
-
     pipe.addStage({
       stageName: 'Build_Lambda',
       actions: [
@@ -107,7 +106,7 @@ export class CodePipelineStack extends Stack {
               },
               buildSpec: BuildSpec.fromSourceFilename('./buildspec.yml'),
               role: lambdaDeployRole,
-              cache: Cache.bucket(cacheBucket)
+              cache: Cache.local(LocalCacheMode.DOCKER_LAYER)
             })
           }),
           getCodeBuildAction('Deploy_Lambda', cdk, cdkDeploy, lambdaStack.node.path, 2)
