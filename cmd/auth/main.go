@@ -50,7 +50,7 @@ func handleRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (r
 		IsAuthorized: false,
 	}
 
-	header, ok := event.Headers["Authorization"]
+	header, ok := event.Headers["authorization"]
 
 	if !ok {
 		fmt.Println("Authorization header missing.")
