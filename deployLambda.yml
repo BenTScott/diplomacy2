@@ -7,7 +7,7 @@ phases:
       - for func in $FUNCTIONS;
         do
           f=$(aws lambda get-function --function-name $func) &&
-          uri=$(f | | jq .Code.ImageUri -r) &&
+          uri=$(f | jq .Code.ImageUri -r) &&
           aws lambda update-function-code --function-name $func --image-uri $uri ||
           true;
         done
