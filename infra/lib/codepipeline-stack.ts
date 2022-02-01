@@ -82,7 +82,7 @@ export class CodePipelineStack extends Stack {
 
     Object.values(repoStack.repositories).forEach(x => x.grantPullPush(lambdaDeployRole))
 
-    const lambdaStack = new LambdaStack(this, 'LambdaStack', { repositories: repoStack.repositories, tag: sourceAction.variables.commitId })
+    const lambdaStack = new LambdaStack(this, 'LambdaStack', { repositories: repoStack.repositories })
 
     pipe.addStage({
       stageName: 'Build_Lambda',

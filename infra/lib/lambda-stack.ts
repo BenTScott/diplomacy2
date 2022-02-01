@@ -7,7 +7,6 @@ import {Secret} from "aws-cdk-lib/aws-secretsmanager";
 
 export interface LambdaStackProps extends StackProps {
   repositories: { [command: string]: Repository };
-  tag: string;
 }
 
 export class LambdaStack extends Stack {
@@ -22,12 +21,10 @@ export class LambdaStack extends Stack {
 
     for (const command in props.repositories) {
       this.functions[command] = new DockerImageFunction(this, capitalize(command) + 'Function', {
-        code: DockerImageCode.fromEcr(props.repositories[command], {
-          tag: props.tag
-        }),
+        code: DockerImageCode.fromEcr(props.repositories[command]),
         environment: {
           "ACCESS_TOKEN_SECRET": secret.secretArn
-        }
+        },
       });
 
       secret.grantRead(this.functions[command])
