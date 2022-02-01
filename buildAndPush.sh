@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
-echo "Found env variable: $LAMBDAS"
 set -e
-echo "--- $MAPPING ---"
 
 tagAndPush() {
   IFS='|'
@@ -11,8 +9,8 @@ tagAndPush() {
   docker push $ecr --all-tags
 }
 
-IFS=';'
-for lambda in $LAMBDAS
+IFS=','
+for lambda in $MAPPING
 do
   IFS='|'
   echo "Building $lambda"
@@ -22,8 +20,8 @@ do
   docker build . --build-arg cmd=$cmd -t $ecr:$CODEBUILD_RESOLVED_SOURCE_VERSION
 done
 
-IFS=';'
-for lambda in $LAMBDAS
+IFS=','
+for lambda in $MAPPING
 do
   tagAndPush $lambda &
 done
