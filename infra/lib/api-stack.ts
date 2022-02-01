@@ -2,9 +2,7 @@ import {Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {
   HttpApi,
-  HttpAuthorizer,
   HttpMethod,
-  HttpNoneAuthorizer,
   IHttpRouteAuthorizer
 } from "@aws-cdk/aws-apigatewayv2-alpha";
 import {HttpLambdaAuthorizer, HttpLambdaResponseType} from "@aws-cdk/aws-apigatewayv2-authorizers-alpha";
