@@ -45,11 +45,11 @@ export class CodePipelineStack extends Stack {
     const cdk = new Artifact('CDK')
 
     pipe.addStage({
-      stageName: 'Build_CDK',
+      stageName: 'BuildCDK',
       actions: [
           new CodeBuildAction({
             input: source,
-            actionName: 'Build_CDK',
+            actionName: 'BuildCDK',
             outputs: [ cdk ],
             project: new PipelineProject(this, 'SynthProject', {
               environment: {
@@ -69,9 +69,9 @@ export class CodePipelineStack extends Stack {
     const cdkDeploy = getCdkDeployProject(this);
 
     pipe.addStage({
-      stageName: 'Deploy_Pipeline_And_Repos',
+      stageName: 'DeployPipelineAndRepos',
       actions: [
-        getCodeBuildAction('Deploy_CDK_Pipeline_And_Repos', cdk, cdkDeploy, `${this.node.path} ${repoStack.node.path}`),
+        getCodeBuildAction('DeployCDKPipelineAndRepos', cdk, cdkDeploy, `${this.node.path} ${repoStack.node.path}`),
       ]
     });
 
@@ -98,11 +98,11 @@ export class CodePipelineStack extends Stack {
     functionList.grantRead(codeBuildSP);
 
     pipe.addStage({
-      stageName: 'Build_Lambda',
+      stageName: 'BuildLambda',
       actions: [
         new CodeBuildAction({
           input: source,
-          actionName: 'Build_Lambda_Images',
+          actionName: 'BuildLambdaImages',
           runOrder: 1,
           project: new PipelineProject(this, 'BuildLambdaProject', {
             environment: {
@@ -124,7 +124,7 @@ export class CodePipelineStack extends Stack {
             cache: Cache.local(LocalCacheMode.DOCKER_LAYER)
           })
         }),
-        getCodeBuildAction('Deploy_Lambda', cdk, cdkDeploy, lambdaStack.node.path, 2),
+        getCodeBuildAction('DeployLambda', cdk, cdkDeploy, lambdaStack.node.path, 2),
         new CodeBuildAction({
           input: source,
           actionName: 'UpdateLambdaFunctions',
@@ -148,9 +148,9 @@ export class CodePipelineStack extends Stack {
     const apiStack = new ApiStack(this, 'ApiStack', { functions: lambdaStack.functions })
 
     pipe.addStage({
-      stageName: 'Deploy_API',
+      stageName: 'DeployAPI',
       actions: [
-          getCodeBuildAction('Deploy_API', cdk, cdkDeploy, apiStack.node.path)
+          getCodeBuildAction('DeployAPI', cdk, cdkDeploy, apiStack.node.path)
       ]
     });
   }
@@ -172,7 +172,7 @@ function getCdkDeployProject(scope: Construct) : PipelineProject {
 
   return new PipelineProject(scope, 'CDKDeployProject', {
     environment: {
-      buildImage: LinuxBuildImage.AMAZON_LINUX_2_2,
+      buildImage: LinuxBuildImage.AMAZON_LINUX_2_3,
       privileged: true
     },
     buildSpec: BuildSpec.fromSourceFilename('./deploy-buildspec.yml'),
