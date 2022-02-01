@@ -1,0 +1,11 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - IFS=','
+      - for func in $FUNCTIONS
+        do
+          uri=$(aws lambda get-function --function-name $func | jq .Code.ImageUri -r)
+          aws lambda update-function-code --function-name $func --image-uri $uri
+        done

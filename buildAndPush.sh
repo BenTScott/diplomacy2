@@ -10,7 +10,7 @@ tagAndPush() {
 }
 
 IFS=','
-for lambda in $MAPPING
+for lambda in $LAMBDAS
 do
   IFS='|'
   echo "Building $lambda"
@@ -21,7 +21,7 @@ do
 done
 
 IFS=','
-for lambda in $MAPPING
+for lambda in $LAMBDAS
 do
   tagAndPush $lambda &
 done

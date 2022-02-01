@@ -75,10 +75,10 @@ export class CodePipelineStack extends Stack {
       ]
     });
 
-    const environment = Object.entries(repoStack.repositories).map(x => x[0] + '|' + x[1].repositoryUri).join(';')
+    const codeBuildSP = new ServicePrincipal('codebuild.amazonaws.com');
 
     const lambdaDeployRole = new Role(this, 'LambdaDeployRole', {
-      assumedBy: new ServicePrincipal('codebuild.amazonaws.com'),
+      assumedBy: codeBuildSP
     });
 
     Object.values(repoStack.repositories).forEach(x => x.grantPullPush(lambdaDeployRole))
@@ -89,40 +89,59 @@ export class CodePipelineStack extends Stack {
       stringListValue: Object.entries(repoStack.repositories).map(x => x[0] + '|' + x[1].repositoryUri),
     });
 
-    commandUriMapping.grantRead(new ServicePrincipal('codebuild.amazonaws.com'))
+    commandUriMapping.grantRead(codeBuildSP);
+
+    const functionList = new StringListParameter(this, 'FunctionList', {
+      stringListValue: Object.values(lambdaStack.functions).map(x => x.functionArn)
+    });
+
+    functionList.grantRead(codeBuildSP);
 
     pipe.addStage({
       stageName: 'Build_Lambda',
       actions: [
-          new CodeBuildAction({
-            input: source,
-            actionName: 'Build_Lambda_Images',
-            runOrder: 1,
-            project: new PipelineProject(this, 'BuildLambdaProject', {
-              environment: {
-                buildImage: LinuxBuildImage.STANDARD_5_0,
-                privileged: true
+        new CodeBuildAction({
+          input: source,
+          actionName: 'Build_Lambda_Images',
+          runOrder: 1,
+          project: new PipelineProject(this, 'BuildLambdaProject', {
+            environment: {
+              buildImage: LinuxBuildImage.STANDARD_5_0,
+              privileged: true
+            },
+            environmentVariables: {
+              AWS_ACCOUNT_ID: {
+                type: BuildEnvironmentVariableType.PLAINTEXT,
+                value: this.account
               },
-              environmentVariables: {
-                LAMBDAS: {
-                  type: BuildEnvironmentVariableType.PLAINTEXT,
-                  value: environment
-                },
-                AWS_ACCOUNT_ID: {
-                  type: BuildEnvironmentVariableType.PLAINTEXT,
-                  value: this.account
-                },
-                MAPPING: {
-                  type: BuildEnvironmentVariableType.PARAMETER_STORE,
-                  value: commandUriMapping.parameterName
-                }
-              },
-              buildSpec: BuildSpec.fromSourceFilename('./buildspec.yml'),
-              role: lambdaDeployRole,
-              cache: Cache.local(LocalCacheMode.DOCKER_LAYER)
-            })
-          }),
-          getCodeBuildAction('Deploy_Lambda', cdk, cdkDeploy, lambdaStack.node.path, 2),
+              LAMBDAS: {
+                type: BuildEnvironmentVariableType.PARAMETER_STORE,
+                value: commandUriMapping.parameterName
+              }
+            },
+            buildSpec: BuildSpec.fromSourceFilename('./buildspec.yml'),
+            role: lambdaDeployRole,
+            cache: Cache.local(LocalCacheMode.DOCKER_LAYER)
+          })
+        }),
+        getCodeBuildAction('Deploy_Lambda', cdk, cdkDeploy, lambdaStack.node.path, 2),
+        new CodeBuildAction({
+          input: source,
+          actionName: 'UpdateLambdaFunctions',
+          runOrder: 1,
+          project: new PipelineProject(this, 'UpdateLambdaProject', {
+            environment: {
+              buildImage: LinuxBuildImage.STANDARD_5_0,
+            },
+            environmentVariables: {
+              FUNCTIONS: {
+                type: BuildEnvironmentVariableType.PARAMETER_STORE,
+                value: functionList.parameterName
+              }
+            },
+            buildSpec: BuildSpec.fromSourceFilename('./deployLambda.yml'),
+          })
+        }),
       ]
     })
 
