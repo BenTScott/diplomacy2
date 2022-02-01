@@ -91,11 +91,26 @@ export class CodePipelineStack extends Stack {
 
     commandUriMapping.grantRead(codeBuildSP);
 
+    const functionArns = Object.values(lambdaStack.functions).map(x => x.functionArn);
+
     const functionList = new StringListParameter(this, 'FunctionList', {
-      stringListValue: Object.values(lambdaStack.functions).map(x => x.functionArn)
+      stringListValue: functionArns
     });
 
     functionList.grantRead(codeBuildSP);
+
+    const lambdaUpdateRole = new Role(this, 'LambdaUpdateRole', {
+      assumedBy: codeBuildSP,
+      inlinePolicies: {
+        "LambdaPolicies": new PolicyDocument({
+          statements: [
+            new PolicyStatement({
+              actions: ["lambda:GetFunction", "lambda:UpdateFunctionCode"],
+              resources: functionArns
+            }),
+          ]
+        })}
+    });
 
     pipe.addStage({
       stageName: 'BuildLambda',
@@ -140,6 +155,7 @@ export class CodePipelineStack extends Stack {
               }
             },
             buildSpec: BuildSpec.fromSourceFilename('./deployLambda.yml'),
+            role: lambdaUpdateRole
           })
         }),
       ]
