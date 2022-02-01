@@ -128,7 +128,7 @@ export class CodePipelineStack extends Stack {
         new CodeBuildAction({
           input: source,
           actionName: 'UpdateLambdaFunctions',
-          runOrder: 1,
+          runOrder: 2,
           project: new PipelineProject(this, 'UpdateLambdaProject', {
             environment: {
               buildImage: LinuxBuildImage.STANDARD_5_0,

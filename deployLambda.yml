@@ -4,8 +4,10 @@ phases:
   build:
     commands:
       - IFS=','
-      - for func in $FUNCTIONS
+      - for func in $FUNCTIONS;
         do
-          uri=$(aws lambda get-function --function-name $func | jq .Code.ImageUri -r)
-          aws lambda update-function-code --function-name $func --image-uri $uri
+          f=$(aws lambda get-function --function-name $func) &&
+          uri=$(f | | jq .Code.ImageUri -r) &&
+          aws lambda update-function-code --function-name $func --image-uri $uri ||
+          true;
         done
