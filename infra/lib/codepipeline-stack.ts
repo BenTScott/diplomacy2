@@ -14,6 +14,7 @@ import {PolicyDocument, PolicyStatement, Role, ServicePrincipal} from "aws-cdk-l
 import {EcrStack} from "./ecr-stack";
 import {LambdaStack} from "./lambda-stack";
 import {ApiStack} from "./api-stack";
+import {StringListParameter} from "aws-cdk-lib/aws-ssm";
 
 export class CodePipelineStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -84,6 +85,12 @@ export class CodePipelineStack extends Stack {
 
     const lambdaStack = new LambdaStack(this, 'LambdaStack', { repositories: repoStack.repositories })
 
+    const commandUriMapping = new StringListParameter(this, 'CommandUriMapping', {
+      stringListValue: Object.entries(repoStack.repositories).map(x => x[0] + '|' + x[1].repositoryUri),
+    });
+
+    commandUriMapping.grantRead(new ServicePrincipal('codebuild.amazonaws.com'))
+
     pipe.addStage({
       stageName: 'Build_Lambda',
       actions: [
@@ -104,6 +111,10 @@ export class CodePipelineStack extends Stack {
                 AWS_ACCOUNT_ID: {
                   type: BuildEnvironmentVariableType.PLAINTEXT,
                   value: this.account
+                },
+                MAPPING: {
+                  type: BuildEnvironmentVariableType.PARAMETER_STORE,
+                  value: commandUriMapping.parameterName
                 }
               },
               buildSpec: BuildSpec.fromSourceFilename('./buildspec.yml'),

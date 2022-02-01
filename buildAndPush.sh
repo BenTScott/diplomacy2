@@ -2,6 +2,7 @@
 
 echo "Found env variable: $LAMBDAS"
 set -e
+echo "$MAPPING"
 
 tagAndPush() {
   IFS='|'
