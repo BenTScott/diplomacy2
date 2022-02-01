@@ -53,6 +53,7 @@ func handleRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (r
 	header, ok := event.Headers["Authorization"]
 
 	if !ok {
+		fmt.Println("Authorization header missing.")
 		return
 	}
 
@@ -71,13 +72,18 @@ func handleRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (r
 		return accessSecret, nil
 	})
 
+	if err != nil {
+		fmt.Println("Couldn't parse token", err)
+		return
+	}
+
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		return authResponse{
 			IsAuthorized: true,
 			Context:      claims,
 		}, nil
 	} else {
-		fmt.Println(err)
+		fmt.Println("Token invalid.")
 		return
 	}
 }
