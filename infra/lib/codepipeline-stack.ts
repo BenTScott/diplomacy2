@@ -25,17 +25,19 @@ export class CodePipelineStack extends Stack {
 
     const source = new Artifact('SourceCode')
 
+    const sourceAction = new GitHubSourceAction({
+      actionName: 'Github',
+      owner: 'BenTScott',
+      repo: 'diplomacy2',
+      oauthToken: SecretValue.secretsManager('github-token'),
+      output: source,
+      trigger: GitHubTrigger.POLL
+    });
+
     pipe.addStage({
       stageName: 'Source',
       actions: [
-          new GitHubSourceAction({
-            actionName: 'Github',
-            owner: 'BenTScott',
-            repo: 'diplomacy2',
-            oauthToken: SecretValue.secretsManager('github-token'),
-            output: source,
-            trigger: GitHubTrigger.POLL
-          }),
+        sourceAction
       ]
     });
 
@@ -80,7 +82,7 @@ export class CodePipelineStack extends Stack {
 
     Object.values(repoStack.repositories).forEach(x => x.grantPullPush(lambdaDeployRole))
 
-    const lambdaStack = new LambdaStack(this, 'LambdaStack', { repositories: repoStack.repositories })
+    const lambdaStack = new LambdaStack(this, 'LambdaStack', { repositories: repoStack.repositories, tag: sourceAction.variables.commitId })
 
     pipe.addStage({
       stageName: 'Build_Lambda',
@@ -109,7 +111,7 @@ export class CodePipelineStack extends Stack {
               cache: Cache.local(LocalCacheMode.DOCKER_LAYER)
             })
           }),
-          getCodeBuildAction('Deploy_Lambda', cdk, cdkDeploy, lambdaStack.node.path, 2)
+          getCodeBuildAction('Deploy_Lambda', cdk, cdkDeploy, lambdaStack.node.path, 2),
       ]
     })
 
