@@ -38,7 +38,7 @@ type authResponse struct {
 	Context      jwt.MapClaims `json:"context"`
 }
 
-func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse) {
+func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse, err error) {
 	fmt.Println(request)
 
 	resp = authResponse{
@@ -69,16 +69,16 @@ func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse) {
 
 	if err != nil {
 		fmt.Println("Couldn't parse token", err)
-		return
+		return resp, nil
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		return authResponse{
 			IsAuthorized: true,
 			Context:      claims,
-		}
+		}, nil
 	} else {
 		fmt.Println("Token invalid", token.Claims)
-		return
+		return resp, nil
 	}
 }
