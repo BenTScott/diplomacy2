@@ -34,23 +34,19 @@ func main() {
 	lambda.Start(handleRequest)
 }
 
-type myContext struct {
-	AString string `json:"aString"`
-}
-
 type authResponse struct {
 	IsAuthorized bool          `json:"isAuthorized"`
 	Context      jwt.MapClaims `json:"context"`
 }
 
-func handleRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (resp authResponse, err error) {
-	fmt.Println(event)
+func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (resp authResponse, err error) {
+	fmt.Println(request, ctx)
 
 	resp = authResponse{
 		IsAuthorized: false,
 	}
 
-	header, ok := event.Headers["authorization"]
+	header, ok := request.Headers["authorization"]
 
 	if !ok {
 		fmt.Println("Authorization header missing.")
@@ -74,7 +70,7 @@ func handleRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (r
 
 	if err != nil {
 		fmt.Println("Couldn't parse token", err)
-		return
+		return resp, nil
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
@@ -83,7 +79,7 @@ func handleRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (r
 			Context:      claims,
 		}, nil
 	} else {
-		fmt.Println("Token invalid.")
-		return
+		fmt.Println("Token invalid", token.Claims)
+		return resp, nil
 	}
 }
