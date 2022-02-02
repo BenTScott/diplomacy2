@@ -33,9 +33,13 @@ func main() {
 	lambda.Start(handleRequest)
 }
 
+type contextTest struct {
+	Username string `json:"username,omitempty"`
+}
+
 type authResponse struct {
-	IsAuthorized bool          `json:"isAuthorized"`
-	Context      jwt.MapClaims `json:"context"`
+	IsAuthorized bool        `json:"isAuthorized"`
+	Context      contextTest `json:"context"`
 }
 
 func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse, err error) {
@@ -73,9 +77,11 @@ func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse, e
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		value := claims["user"].(string)
+
 		return authResponse{
 			IsAuthorized: true,
-			Context:      claims,
+			Context:      contextTest{Username: value},
 		}, nil
 	} else {
 		fmt.Println("Token invalid", token.Claims)
