@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -39,8 +38,8 @@ type authResponse struct {
 	Context      jwt.MapClaims `json:"context"`
 }
 
-func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (resp authResponse, err error) {
-	fmt.Println(request, ctx)
+func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse, err error) {
+	fmt.Println(request)
 
 	resp = authResponse{
 		IsAuthorized: false,
