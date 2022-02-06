@@ -6,30 +6,16 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/golang-jwt/jwt"
-	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
 var accessSecret []byte
 
 func init() {
-	sess := session.Must(session.NewSession())
-	secrets := secretsmanager.New(sess)
-	sv, err := secrets.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(os.Getenv("ACCESS_TOKEN_SECRET")),
-	})
-
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	accessSecret = sv.SecretBinary
+	accessSecret = auth.GetAccessTokenSecret(session.Must(session.NewSession()))
 }
 
 func main() {
