@@ -1,6 +1,7 @@
 package main
 
 import (
+	"diplomacy/pkg/auth"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -33,13 +34,13 @@ func main() {
 	lambda.Start(handleRequest)
 }
 
-type contextTest struct {
+type LambdaContext struct {
 	Username string `json:"username,omitempty"`
 }
 
 type authResponse struct {
-	IsAuthorized bool        `json:"isAuthorized"`
-	Context      contextTest `json:"context"`
+	IsAuthorized bool          `json:"isAuthorized"`
+	Context      LambdaContext `json:"context"`
 }
 
 func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse, err error) {
@@ -76,12 +77,10 @@ func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse, e
 		return resp, nil
 	}
 
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		value := claims["user"].(string)
-
+	if claims, ok := token.Claims.(auth.Claims); ok && token.Valid {
 		return authResponse{
 			IsAuthorized: true,
-			Context:      contextTest{Username: value},
+			Context:      LambdaContext{Username: claims.Username},
 		}, nil
 	} else {
 		fmt.Println("Token invalid", token.Claims)

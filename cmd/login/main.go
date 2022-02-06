@@ -1,6 +1,7 @@
 package main
 
 import (
+	"diplomacy/pkg/auth"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
@@ -12,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 var accessSecret []byte
@@ -62,9 +64,9 @@ func loginHandler(req events.APIGatewayV2HTTPRequest) (resp events.APIGatewayV2H
 		return
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
-		"user":    body.Username,
-		"expires": 1500,
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, auth.Claims{
+		Username: body.Username,
+		Expires:  time.Now().Add(time.Hour * 2).Unix(),
 	})
 
 	ss, err := token.SignedString(accessSecret)
