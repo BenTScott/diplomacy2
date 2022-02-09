@@ -50,7 +50,7 @@ func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse, e
 
 	accessToken := splitToken[1]
 
-	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(accessToken, &auth.Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -63,12 +63,12 @@ func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse, e
 		return resp, nil
 	}
 
-	if _, ok := token.Claims.(auth.Claims); !ok {
+	if _, ok := token.Claims.(*auth.Claims); !ok {
 		fmt.Println("Token wrong type", token.Claims)
 		return resp, nil
 	}
 
-	if claims, ok := token.Claims.(auth.Claims); ok && token.Valid {
+	if claims, ok := token.Claims.(*auth.Claims); ok && token.Valid {
 		return authResponse{
 			IsAuthorized: true,
 			Context:      LambdaContext{Username: claims.Username},
