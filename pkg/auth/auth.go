@@ -33,7 +33,7 @@ type Claims struct {
 func (c Claims) Valid() error {
 	now := time.Now().Unix()
 
-	if c.Expires >= now {
+	if c.Expires <= now {
 		return fmt.Errorf("token has expired")
 	}
 

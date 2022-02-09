@@ -59,12 +59,7 @@ func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse, e
 	})
 
 	if err != nil {
-		fmt.Println("Couldn't parse token", err)
-		return resp, nil
-	}
-
-	if _, ok := token.Claims.(*auth.Claims); !ok {
-		fmt.Println("Token wrong type", token.Claims)
+		fmt.Println("Token is invalid", err)
 		return resp, nil
 	}
 
