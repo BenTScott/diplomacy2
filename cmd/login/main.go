@@ -47,7 +47,7 @@ func loginHandler(req events.APIGatewayV2HTTPRequest) (resp events.APIGatewayV2H
 
 	body, err := parseBody[loginReq](req.Body)
 	if err != nil {
-		return
+		return resp, nil
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, auth.Claims{

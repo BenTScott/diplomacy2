@@ -63,6 +63,11 @@ func handleRequest(request events.APIGatewayV2HTTPRequest) (resp authResponse, e
 		return resp, nil
 	}
 
+	if _, ok := token.Claims.(auth.Claims); !ok {
+		fmt.Println("Token wrong type", token.Claims)
+		return resp, nil
+	}
+
 	if claims, ok := token.Claims.(auth.Claims); ok && token.Valid {
 		return authResponse{
 			IsAuthorized: true,
